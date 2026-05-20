@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Đồng Hồ Đếm Ngược - Cây Nảy Mầm - Cho Học Sinh THPT - 25 phút</title>
+  <style>
+    :root{
+      --bg1: #e0f7fa;
+      --bg2: #ffffff;
+      --accent: #2e7d32;
+      --card-bg: rgba(255,255,255,0.95);
+    }
+
+    *{box-sizing: border-box;}
+    html,body{
+      height:100%;
+      margin:0;
+      padding:0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg,var(--bg1),var(--bg2));
+      color:#333;
+    }
+
+    /* Layout: main content centered, footer at bottom */
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    header h1{
+      margin: 6px 0 10px;
+      color: var(--accent);
+      font-size: 34px;
+      text-align:center;
+    }
+
+    .timer {
+      font-size: 56px;
+      margin: 12px 0 18px;
+      font-weight: 700;
+      color: #1b5e20;
+    }
+
+    .buttons{
+      margin-bottom: 18px;
+    }
+
+    button{
+      padding: 12px 22px;
+      font-size: 18px;
+      margin: 6px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    button:active{ transform: translateY(1px); }
+    #startBtn{ background:#4CAF50; color:#fff; }
+    #startBtn:hover{ filter:brightness(.95); }
+    #endBtn{ background:#f44336; color:#fff; }
+    #endBtn:hover{ filter:brightness(.95); }
+
+    /* Frame giữ tỉ lệ 16:9 cho vùng ảnh (fallback padding-top) */
+    .stage-frame{
+      width: min(820px, 92%);
+      background: var(--card-bg);
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* modern: aspect-ratio */
+    .image-area{
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: linear-gradient(180deg,#fbfffb,#f1fff4);
+    }
+    .image-area .ratio {
+      width: 100%;
+    }
+    /* use aspect-ratio if supported */
+    .aspect {
+      aspect-ratio: 16 / 9;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width: 100%;
+      position: relative;
+    }
+    /* fallback for very old browsers: padding-top trick */
+    .aspect.fallback {
+      height:0;
+      padding-top: calc(9 / 16 * 100%);
+    }
+
+    /* image styling */
+    #plantImage{
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      display: none; /* shown by JS when needed */
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%,-50%) scale(1);
+      object-fit: contain; /* important: không crop, giữ tỉ lệ */
+      transition: opacity .6s ease, transform .45s ease;
+      opacity: 0;
+    }
+
+    .stage-msg {
+      font-size: 22px;
+      font-weight: 700;
+      color:#2e7d32;
+      text-align:center;
+      min-height: 28px;
+    }
+
+    footer{
+      background: rgba(255,255,255,0.95);
+      border-top: 3px solid #a5d6a7;
+      padding: 18px 20px;
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    footer h2{
+      margin: 0 0 8px;
+      color:#1b5e20;
+      font-size: 20px;
+    }
+
+    footer p{
+      margin:0 auto;
+      max-width: 1000px;
+      text-align: justify;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 900px){
+      .timer{ font-size:48px; }
+      header h1{ font-size:28px; }
+      .stage-msg{ font-size:20px; }
+    }
+
+    @media (max-width: 480px){
+      .timer{ font-size:40px; }
+      button{ padding:10px 16px; font-size:16px; }
+      header h1{ font-size:22px; }
+      .stage-frame{ padding:12px; border-radius:10px; }
+      footer{ font-size:14px; padding:14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <main>
+      <header>
+        <h2 style="color:#e71d0b; text-align:center; margin-bottom:6px;">
+            👋 CHÀO MỪNG CÁC BẠN ĐẾN TỪ TRƯỜNG TRUNG HỌC PHỔ THÔNG !!! 👋
+        </h2>
+        <h1>🌱 Các bạn nhấp vào "START" để trồng cây nhé! 🌳</h1>
+      </header>
+
+      <div class="timer" id="timer">00:25</div>
+
+      <div class="buttons">
+        <button id="startBtn">START</button>
+        <button id="endBtn" disabled>END</button>
+      </div>
+
+      <div class="stage-frame" role="region" aria-label="Khu vực hiển thị cây">
+        <div class="stage-msg" id="message"></div>
+
+        <div class="image-area">
+          <!-- aspect div giữ tỷ lệ; plantImage positioned absolute inside -->
+          <div class="aspect" id="aspectBox">
+            <img id="plantImage" src="" alt="Hình cây / hạt" />
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <h2>Đánh Tan Màn Sương: Nâng Cao Tập Trung Học Tập Cho Học Sinh, Sinh Viên</h2>
+      <p>
+        Hội chứng "Brain Fog" hay tình trạng mất tập trung kéo dài đang trở thành một thách thức nghiêm trọng đối với học sinh, sinh viên hiện nay. Không chỉ là sự lơ đãng nhất thời, đây là tình trạng đầu óc mơ hồ, khó duy trì chú ý do áp lực học tập, thiếu ngủ và lối sống không lành mạnh. Hậu quả của nó rất lớn: từ kết quả học tập sa sút, ảnh hưởng đến khả năng tư duy, giải quyết vấn đề, cho đến các vấn đề sức khỏe tinh thần như lo âu, trầm cảm. Tuy nhiên, bạn hoàn toàn có thể thay đổi! Khả năng tập trung không phải là tài năng bẩm sinh mà là một kỹ năng có thể rèn luyện. "Sự tập trung là khởi đầu của mọi thành công lớn." Hãy bắt đầu từ những thay đổi nhỏ, kiên trì mỗi ngày: thiết lập mục tiêu rõ ràng, loại bỏ phiền nhiễu, và dành thời gian nghỉ ngơi hợp lý. Mỗi nỗ lực duy trì sự chú ý là bạn đang xây dựng "cơ bắp" cho não bộ. Đừng nản lòng trước thất bại, vì "hạnh phúc là chìa khóa của thành công." Bằng sự nỗ lực và thực hành, bạn sẽ vượt qua "màn sương" và chinh phục mục tiêu học tập của mình.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // --- Elements ---
+    const startBtn = document.getElementById("startBtn");
+    const endBtn = document.getElementById("endBtn");
+    const timerEl = document.getElementById("timer");
+    const messageEl = document.getElementById("message");
+    const plantImage = document.getElementById("plantImage");
+
+    // --- Config (tên file ảnh - đặt cùng thư mục với file html) ---
+    const IMAGE_SEEDER = "thpt-trong-cay-ban-dau.png";
+    const IMAGE_STAGE_1 = "thpt-trong-cay-1.png";
+    const IMAGE_STAGE_2 = "thpt-trong-cay-2.png";
+    const IMAGE_STAGE_3 = "thpt-trong-cay-3.png";
+    const IMAGE_STAGE_4 = "thpt-trong-cay-4.png";
+    const IMAGE_STAGE_5 = "thpt-trong-cay-5.png";
+    const IMAGE_DEAD = "thpt-trong-cay-ket-thuc.png"; // cây khô khi END giữa chừng
+
+    const images = [
+      IMAGE_STAGE_1,
+      IMAGE_STAGE_2,
+      IMAGE_STAGE_3,
+      IMAGE_STAGE_4,
+      IMAGE_STAGE_5
+    ];
+
+    const messages = [
+      "🌱 Hạt giống chưa nảy mầm!",
+      "🍃 Cố lên, hạt đã nảy mầm rồi!",
+      "🌿 Cây non bắt đầu khỏe mạnh!",
+      "🌳 Cây dần trở nên tươi tốt!",
+      "🌳 Cây đã trưởng thành!"
+    ];
+
+    // --- State ---
+    let countdown;
+    let timeLeft = 1500; // 25 phút
+    let gameRunning = false;
+    let stage = 0;
+
+    // --- Helpers ---
+    function updateTimerDisplay(){
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      timerEl.textContent = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+    }
+
+    // show image with fade/scale, ensure it's visible on all devices
+    function showImage(src, msg){
+      messageEl.textContent = msg || "";
+      // set src first to trigger load
+      plantImage.src = src;
+      plantImage.style.display = "block";   // ensure not display:none
+      // reset transform/opacity quickly to animate
+      plantImage.style.opacity = 0;
+      plantImage.style.transform = "translate(-50%,-50%) scale(.95)";
+      // give browser a tick to register
+      setTimeout(() => {
+        plantImage.style.opacity = 1;
+        plantImage.style.transform = "translate(-50%,-50%) scale(1)";
+      }, 80);
+    }
+
+    // --- Events ---
+    startBtn.addEventListener("click", () => {
+      // reset
+      timeLeft = 1500;
+      stage = 0;
+      updateTimerDisplay();
+      messageEl.textContent = "";
+      plantImage.style.display = "none";
+
+      gameRunning = true;
+      startBtn.disabled = true;
+      endBtn.disabled = false;
+
+      // show seeder immediately
+      showImage(IMAGE_SEEDER, "👩‍🌾 Các bạn ơi chúng ta trồng cây nhé! ...");
+
+      countdown = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+
+        // After 5 minutes have passed -> timeLeft == 1200 (1500-300)
+        if (timeLeft === 1200) {
+          stage = 1;
+          showImage(images[stage - 1], messages[stage - 1]);
+        }
+
+        // then every 5 minutes later (when timeLeft < 1200)
+        if (timeLeft % 300 === 0 && timeLeft < 1200 && timeLeft > 0) {
+          stage = Math.min(stage + 1, images.length);
+          showImage(images[stage - 1], messages[stage - 1]);
+        }
+
+        // finished
+        if (timeLeft <= 0) {
+          clearInterval(countdown);
+          gameRunning = false;
+          startBtn.disabled = false;
+          endBtn.disabled = true;
+          showImage(images[images.length - 1], "🎉Chúc mừng các bạn! Cây đã trưởng thành rồi!🎉");
+        }
+      }, 1000);
+    });
+
+    endBtn.addEventListener("click", () => {
+      if (!gameRunning) return;
+      clearInterval(countdown);
+      gameRunning = false;
+      startBtn.disabled = false;
+      endBtn.disabled = true;
+      showImage(IMAGE_DEAD, "❌ Bạn thử lại lần nữa nhé! Cố lên!!!...");
+    });
+
+    // ensure timer initial value shows correct
+    updateTimerDisplay();
+
+    // Accessibility/fallback: if aspect-ratio not supported, add fallback class
+    (function applyAspectFallback(){
+      const test = document.createElement('div');
+      if (!('aspectRatio' in test.style) && !('aspect-ratio' in test.style)) {
+        // add fallback class to aspect box which can be styled with padding-top if needed
+        const aspectBox = document.getElementById('aspectBox');
+        aspectBox.classList.add('fallback');
+      }
+    })();
+  </script>
+</body>
+</html>
